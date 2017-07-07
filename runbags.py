@@ -1,10 +1,12 @@
-#!/usr/bin/python
-from OSC import *
+#!/usr/bin/python3
+from osc4py3.as_eventloop import *
+from osc4py3 import oscbuildparse
 import RPi.GPIO as GPIO
 import sys
+import time 
 
-print 'Started with arguments:', str(sys.argv)
-print 'Mode: ', sys.argv[1]
+print('Started with arguments:', str(sys.argv))
+print('Mode: ', sys.argv[1])
 
 if sys.argv[1] == 'player1' :
 	outmsg = "/eos/fader/1/2/fire"
@@ -15,24 +17,30 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup(27, GPIO.IN)
 GPIO.setup(25, GPIO.OUT)
 
-c = OSCStreamingClient()
-c.connect(('10.101.2.177',3032))
+osc_startup()
+osc_udp_client("10.101.2.177", 53001, "hans_etcnomad")
 
-def eos_out_handler(addr, tags, stuff, source):
-	1	
-c.addMsgHandler('default', eos_out_handler)
-c.sendOSC(OSCMessage("/eos/fader/1/config/10"))
+try:
+	msg = oscbuildparse.OSCMessage(outmsg, "", [])
 
-def send_osc_on_change(channel) :
-	if GPIO.input(channel):
-		# c.sendOSC(OSCMessage(""))
-		GPIO.output(25, False)
-	else :
-		c.sendOSC(OSCMessage(outmsg))
-		GPIO.output(25, True)
+	def send_osc_on_change(channel) :
+		if GPIO.input(channel):
+			GPIO.output(25, False)
+		else :
+			GPIO.output(25, True)
+			osc_send(msg, "hans_etcnomad")
+	
+	GPIO.add_event_detect(27, GPIO.BOTH, callback=send_osc_on_change, bouncetime=1)
 
-GPIO.add_event_detect(27, GPIO.BOTH, callback=send_osc_on_change, bouncetime=1)
-
-input()
-
-quit()
+	while True:
+		osc_process()
+		time.sleep(0.01)
+except KeyboardInterrupt:
+	print("\nExiting")
+except:
+	e = sys.exec_info()[0]
+	write_to_page("Error: %s" % e)
+	print("\nExiting for other reason")
+finally:
+	osc_terminate()
+	GPIO.cleanup()
