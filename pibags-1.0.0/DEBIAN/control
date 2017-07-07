@@ -1,0 +1,6 @@
+Package: pibags
+Version: 1.0.0-0
+Architecture: armhf
+Maintainer: Hans Hinrichsen <hinrichsen.hans@gmail.com>
+Depends: python3, python3-pip, python3-rpi.gpio
+Description: UDP OSC interface for RPI infared sensor for bags game
