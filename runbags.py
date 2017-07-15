@@ -17,8 +17,7 @@ if 'player1' in sys.argv :
 else :
 	outmsg = "/eos/fader/1/5/fire"
 	print('Mode: Player 2')
-outmsg = "/eos/fader/1/8/fire" 
-# ignore for now
+
 inimsg = "/eos/fader/1/config/10"
 
 GPIO.setmode(GPIO.BCM)
@@ -44,7 +43,7 @@ try:
 			if PRINT_STATE_CHANGE :
 				print("on\n")
 	
-	GPIO.add_event_detect(IR_INPUT_PIN, GPIO.BOTH, callback=send_osc_on_change, bouncetime=1)
+	GPIO.add_event_detect(IR_INPUT_PIN, GPIO.BOTH, callback=send_osc_on_change, bouncetime=100)
 
 	while True:
 		osc_process()
