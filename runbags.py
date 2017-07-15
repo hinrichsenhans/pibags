@@ -5,11 +5,25 @@ import RPi.GPIO as GPIO
 import sys
 import time 
 
+#### options ####
+# input pin for ir sensor (white wire)
 IR_INPUT_PIN = 6 
+
+# output pin for indicator LED
 LED_OUTPUT_PIN = 25
-	PRINT_STATE_CHANGE = 1
-SEND_ON_UP_EDGE_INSTEAD = 1
+
+# print changes to stdout
+PRINT_STATE_CHANGE = 1
+
+# time in seconds to suppress duplicate messages. a second closure outside this time is ignored
 MS_BOUNCE_TIME = .50
+
+# ip address of target device
+OSC_TARGET_IP = "10.101.2.177"
+
+# udp port for target device to receive OSC
+OSC_TARGET_PORT = 53001
+
 
 print('Started with arguments:', str(sys.argv))
 
@@ -20,31 +34,34 @@ else :
 	outmsg = "/eos/fader/1/5/fire"
 	print('Mode: Player 2')
 
-if SEND_ON_UP_EDGE_INSTEAD :
-	print('Edge: UP_EDGE')
-else :
-	print('Edge: DOWN_EDGE')
-
 print('Bounce time (ms): ' + str(MS_BOUNCE_TIME))
 
-inimsg = "/eos/fader/1/config/10"
 
+# init message for Eos - map same fader config as wings/virtual module
+initmsg_str = "/eos/fader/1/config/10"
+
+# GPIO setup
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(IR_INPUT_PIN, GPIO.IN)
 GPIO.setup(LED_OUTPUT_PIN, GPIO.OUT)
+
+# OSC 
 osc_startup()
+osc_udp_client(OSC_TARGET_IP, OSC_TARGET_PORT, "primary_osc_device")
 
-osc_udp_client("10.101.2.177", 53001, "hans_etcnomad")
-
-
+# Score variables
 score_active = False
 activation_time = time.perf_counter()
 
-try:
-	msg = oscbuildparse.OSCMessage(outmsg, "", [])
-	initmsg = oscbuildparse.OSCMessage(inimsg, "", {})
-	osc_send(initmsg, "hans_etcnomad")
 
+try:
+	# startup
+	initmsg = oscbuildparse.OSCMessage(initmsg_str, "", {})
+	osc_send(initmsg, "primary_osc_device")
+
+	msg = oscbuildparse.OSCMessage(outmsg, "", [])
+
+	# callback for GPIO 
 	def send_osc_on_change(channel) :
 		global activation_time
 		global score_active
@@ -52,10 +69,9 @@ try:
 		# open = clear path on IR sensor
 		if GPIO.input(channel):
 			GPIO.output(LED_OUTPUT_PIN, False)
-			if SEND_ON_UP_EDGE_INSTEAD :
-				activation_time = time.perf_counter()
-				score_active = False
-				osc_send(msg, "hans_etcnomad")
+			activation_time = time.perf_counter()
+			score_active = False
+			osc_send(msg, "primary_osc_device")
 			if PRINT_STATE_CHANGE :
 				print("off\n")
 
