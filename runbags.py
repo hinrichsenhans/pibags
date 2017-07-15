@@ -7,9 +7,9 @@ import time
 
 IR_INPUT_PIN = 6 
 LED_OUTPUT_PIN = 25
-PRINT_STATE_CHANGE = 0
+	PRINT_STATE_CHANGE = 1
 SEND_ON_UP_EDGE_INSTEAD = 1
-MS_BOUNCE_TIME = 500
+MS_BOUNCE_TIME = .50
 
 print('Started with arguments:', str(sys.argv))
 
@@ -36,26 +36,41 @@ osc_startup()
 
 osc_udp_client("10.101.2.177", 53001, "hans_etcnomad")
 
+
+score_active = False
+activation_time = time.perf_counter()
+
 try:
 	msg = oscbuildparse.OSCMessage(outmsg, "", [])
 	initmsg = oscbuildparse.OSCMessage(inimsg, "", {})
 	osc_send(initmsg, "hans_etcnomad")
 
 	def send_osc_on_change(channel) :
+		global activation_time
+		global score_active
+
+		# open = clear path on IR sensor
 		if GPIO.input(channel):
 			GPIO.output(LED_OUTPUT_PIN, False)
 			if SEND_ON_UP_EDGE_INSTEAD :
+				activation_time = time.perf_counter()
+				score_active = False
 				osc_send(msg, "hans_etcnomad")
 			if PRINT_STATE_CHANGE :
 				print("off\n")
+
+		# closed = sensor blocked - possible score!
 		else :
-			GPIO.output(LED_OUTPUT_PIN, True)
-			if not SEND_ON_UP_EDGE_INSTEAD :
-				osc_send(msg, "hans_etcnomad")
+			if(time.perf_counter() - activation_time > MS_BOUNCE_TIME) :
+				score_active = True
+				GPIO.output(LED_OUTPUT_PIN, True)
 			if PRINT_STATE_CHANGE :
 				print("on\n")
 	
-	GPIO.add_event_detect(IR_INPUT_PIN, GPIO.BOTH, callback=send_osc_on_change, bouncetime=MS_BOUNCE_TIME)
+	# add modest 50ms bounce time to GPIO lib - problem is that both down and up edge are absorbed
+	# by the library, so we miss the up edge when it happens. allowing 51ms to MS_BOUNCE_TIME ms
+	# to clear the sensor
+	GPIO.add_event_detect(IR_INPUT_PIN, GPIO.BOTH, callback=send_osc_on_change, bouncetime=50)
 
 	while True:
 		osc_process()
