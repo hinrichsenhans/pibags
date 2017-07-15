@@ -8,6 +8,8 @@ import time
 IR_INPUT_PIN = 6 
 LED_OUTPUT_PIN = 25
 PRINT_STATE_CHANGE = 0
+SEND_ON_UP_EDGE_INSTEAD = 1
+MS_BOUNCE_TIME = 500
 
 print('Started with arguments:', str(sys.argv))
 
@@ -17,6 +19,13 @@ if 'player1' in sys.argv :
 else :
 	outmsg = "/eos/fader/1/5/fire"
 	print('Mode: Player 2')
+
+if SEND_ON_UP_EDGE_INSTEAD :
+	print('Edge: UP_EDGE')
+else :
+	print('Edge: DOWN_EDGE')
+
+print('Bounce time (ms): ' + str(MS_BOUNCE_TIME))
 
 inimsg = "/eos/fader/1/config/10"
 
@@ -35,15 +44,18 @@ try:
 	def send_osc_on_change(channel) :
 		if GPIO.input(channel):
 			GPIO.output(LED_OUTPUT_PIN, False)
+			if SEND_ON_UP_EDGE_INSTEAD :
+				osc_send(msg, "hans_etcnomad")
 			if PRINT_STATE_CHANGE :
 				print("off\n")
 		else :
 			GPIO.output(LED_OUTPUT_PIN, True)
-			osc_send(msg, "hans_etcnomad")
+			if not SEND_ON_UP_EDGE_INSTEAD :
+				osc_send(msg, "hans_etcnomad")
 			if PRINT_STATE_CHANGE :
 				print("on\n")
 	
-	GPIO.add_event_detect(IR_INPUT_PIN, GPIO.BOTH, callback=send_osc_on_change, bouncetime=100)
+	GPIO.add_event_detect(IR_INPUT_PIN, GPIO.BOTH, callback=send_osc_on_change, bouncetime=MS_BOUNCE_TIME)
 
 	while True:
 		osc_process()
