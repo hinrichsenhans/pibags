@@ -1,2 +1,5 @@
 #!/bin/sh
 pip install osc4py3
+cp /home/pi/pibags/pibags.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable pibags

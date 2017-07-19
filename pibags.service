@@ -1,0 +1,7 @@
+[Service]
+Restart=always
+Environment="PLAYER1=player1"
+ExecStart=/home/pi/pibags/runbags.py $PLAYER1
+Type=idle
+[Install]
+WantedBy=multi-user.target
